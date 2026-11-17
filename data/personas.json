@@ -1,0 +1,29 @@
+[
+  {
+    "id": "P1",
+    "label": "Étudiante 21 ans, peau mixte à tendance acnéique, budget serré",
+    "skin": "mixte, imperfections, phototype III",
+    "age": 21,
+    "budget": "faible (< 15 € par produit)",
+    "channels": "TikTok, Instagram, pharmacie",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P2",
+    "label": "Cadre 38 ans, peau sensible et réactive",
+    "skin": "sensible, rougeurs, phototype V",
+    "age": 38,
+    "budget": "moyen (15-40 €)",
+    "channels": "pharmacie, e-shop, newsletter",
+    "note": "Persona synthétique — encore hypothétique."
+  },
+  {
+    "id": "P3",
+    "label": "Femme 52 ans, préoccupation anti-âge, cliente fidèle",
+    "skin": "sèche, rides, phototype II",
+    "age": 52,
+    "budget": "élevé (> 40 €)",
+    "channels": "parfumerie, e-shop, conseil en boutique",
+    "note": "Persona synthétique — encore hypothétique."
+  }
+]
