@@ -1,0 +1,7 @@
+litellm>=1.40
+python-dotenv>=1.0
+# diffusion experiment (GPU recommended)
+torch
+diffusers>=0.27
+transformers
+accelerate
