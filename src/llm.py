@@ -7,6 +7,8 @@ mock outputs are NOT results and must never be reported as "mesuré").
 SEED is only sent to providers that accept it (OpenAI and Mistral do, Anthropic does not: LiteLLM
 raises UnsupportedParamsError if it is sent). Each trace records `seed_applied`; calls without a
 seed are not reproducible token for token, so their logged outputs are the reference.
+Likewise TEMPERATURE is only sent to models that accept it: the Claude 5.5 family has reasoning always on
+and only runs at its own sampling settings (`temperature_applied` is false in their traces).
 """
 import functools
 import json
@@ -61,25 +63,40 @@ def seed_supported(model: str) -> bool:
     return "seed" in (params or [])
 
 
+@functools.lru_cache(maxsize=None)
+def temperature_supported(model: str) -> bool:
+    """False for models LiteLLM's model map flags as rejecting sampling params (Claude 5.5 family)."""
+    import litellm
+    entry = litellm.model_cost.get(model) or litellm.model_cost.get(model.split("/", 1)[-1]) or {}
+    return entry.get("supports_sampling_params") is not False
+
+
 def call(role: str, model: str, system: str, user: str, prompt_version: str) -> dict:
     """Call a model, return {"text", "json", "latency_s", "cost_usd"} and log a trace."""
     start = time.perf_counter()
     cost = 0.0
     seed_applied = False
+    temperature_applied = False
+    served = None
     if MOCK:
         from mock import mock_answer
         text = mock_answer(role, user)
     else:
         import litellm
         seed_applied = seed_supported(model)
-        extra = {"seed": SEED} if seed_applied else {}
+        temperature_applied = temperature_supported(model)
+        extra = {}
+        if temperature_applied:
+            extra["temperature"] = TEMPERATURE
+        if seed_applied:
+            extra["seed"] = SEED
         resp = litellm.completion(
             model=model,
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
-            temperature=TEMPERATURE,
             **extra,
         )
         text = resp.choices[0].message.content
+        served = getattr(resp, "model", None)
         try:
             cost = litellm.completion_cost(completion_response=resp) or 0.0
         except Exception:
@@ -87,8 +104,9 @@ def call(role: str, model: str, system: str, user: str, prompt_version: str) -> 
     latency = time.perf_counter() - start
     parsed = parse_json(text)
     trace({
-        "type": "llm_call", "role": role, "model": "mock" if MOCK else model,
-        "prompt_version": prompt_version, "temperature": TEMPERATURE,
+        "type": "llm_call", "role": role, "model": "mock" if MOCK else model, "model_served": served,
+        "prompt_version": prompt_version,
+        "temperature": TEMPERATURE if temperature_applied else None, "temperature_applied": temperature_applied,
         "seed": SEED if seed_applied else None, "seed_applied": seed_applied,
         "latency_s": round(latency, 3), "cost_usd": cost, "json_ok": parsed is not None,
         "input": user[:2000], "output": (text or "")[:4000],

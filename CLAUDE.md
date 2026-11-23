@@ -17,6 +17,9 @@ for a skincare / dermatology-cosmetics brand:
 Background decision: the team first wanted to model the processes of large consulting firms, but there was not
 enough data. The objective-anchored, simulate-and-audit approach replaced it. Don't reintroduce "imitate McKinsey".
 
+Current providers (`.env.example`): Anthropic (orchestrator + generator), OpenAI (generator, personas, baseline),
+Google Gemini (generator), Mistral (auditor). One API key per provider; the README lists them.
+
 Architecture diagram (Whiteboard): https://claude.ai/artifact/VgJqsrKfx9WbgWsxbmCYca
 
 ## Architecture and roles
@@ -28,7 +31,7 @@ Architecture diagram (Whiteboard): https://claude.ai/artifact/VgJqsrKfx9WbgWsxbm
 | Client simulators | LLM | Persona agents by skin type, concern, age, budget, channel. Cheap model, many calls |
 | Synthetic client base | Gen AI | Personas must be grounded in real/authorised market data, otherwise they stay "encore hypothétique" |
 | Visual creatives | **Diffusion** | Ad visuals / packaging per scenario (SDXL-Turbo, Flux). Required: the official brief demands a diffusion experiment |
-| Auditor | LLM | **Must be a different model from the generators** (no model grades its own work). KPI score + compliance |
+| Auditor | LLM | **Must be a different model from the generators** (no model grades its own work; `pipeline.py` refuses to start otherwise). KPI score + compliance |
 | Model bandit | Classic algorithm | Thompson sampling / UCB to allocate simulation budget to promising scenarios. Not an LLM |
 | Merger | LLM | Combines top scenarios, must check the result is still coherent |
 | Mini Netflix | UI | Ranked scenario cards: *comment* (how), *qui* (who), *chiffre* (figures). Crown = winner |
@@ -38,7 +41,8 @@ Architecture diagram (Whiteboard): https://claude.ai/artifact/VgJqsrKfx9WbgWsxbm
 - `src/pipeline.py` — candidate chain (orchestrator → generators → personas → auditor → best) and single-LLM baseline
 - `src/prompts.py` — all prompts; **bump `PROMPT_VERSION` on every prompt change**
 - `src/llm.py` — LiteLLM wrapper, JSONL tracing to `experiments/traces/`, `MOCK=1` offline mode.
-  `seed` is only sent to providers that accept it (not Anthropic); traces record `seed_applied`
+  `seed` is only sent to providers that accept it (not Anthropic) and `temperature` only to models that accept it
+  (not the Claude 5.5 family); traces record `seed_applied`, `temperature_applied` and `model_served`
 - `src/tools.py` — permission gate; `publish_ad` is always refused (human approval required)
 - `src/run_eval.py` — runs baseline vs candidate on `tests/cases.json` → `experiments/results.csv`
 - `src/checks.py` — automated per-case checks mirroring each case's `verification` text (`case_pass` column).

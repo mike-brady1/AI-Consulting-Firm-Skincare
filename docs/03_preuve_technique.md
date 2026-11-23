@@ -18,10 +18,10 @@ peaux claires ; une description explicite de la teinte corrige ce biais. *(encor
 |---|---|
 | Version des prompts | `v0.2` (`src/prompts.py`) |
 | Orchestrateur | [modèle] |
-| Générateurs | [modèle 1], [modèle 2] |
+| Générateurs | [modèle 1], [modèle 2], [modèle 3] |
 | Personas | [modèle], 3 personas synthétiques |
 | Auditeur | [modèle] — différent des générateurs |
-| Température / seed | 0.2 / 42 — seed non pris en charge par Anthropic : voir `seed_applied` dans les traces |
+| Température / seed | 0.2 / 42 — Claude Sonnet 5.5 n'accepte ni température ni seed (raisonnement toujours actif) : voir `temperature_applied` et `seed_applied` dans les traces |
 | Diffusion | [stabilityai/sdxl-turbo], guidance 0.0, seeds 11/22/33/44 |
 | run_id | [voir experiments/traces/] |
 

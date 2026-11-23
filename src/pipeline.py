@@ -13,12 +13,16 @@ from tools import request_tool
 
 ROOT = Path(__file__).resolve().parent.parent
 
-ORCHESTRATOR_MODEL = os.getenv("ORCHESTRATOR_MODEL", "anthropic/claude-sonnet-4-5")
+ORCHESTRATOR_MODEL = os.getenv("ORCHESTRATOR_MODEL", "anthropic/claude-sonnet-5-5")
 GENERATOR_MODELS = [m.strip() for m in os.getenv(
-    "GENERATOR_MODELS", "anthropic/claude-sonnet-4-5,openai/gpt-4o-mini").split(",") if m.strip()]
+    "GENERATOR_MODELS",
+    "anthropic/claude-sonnet-5-5,openai/gpt-4o-mini,gemini/gemini-flash-latest").split(",") if m.strip()]
 PERSONA_MODEL = os.getenv("PERSONA_MODEL", "openai/gpt-4o-mini")
 AUDITOR_MODEL = os.getenv("AUDITOR_MODEL", "mistral/mistral-large-latest")
 BASELINE_MODEL = os.getenv("BASELINE_MODEL", "openai/gpt-4o-mini")
+
+if AUDITOR_MODEL in GENERATOR_MODELS:  # no model grades its own work
+    raise SystemExit(f"AUDITOR_MODEL ({AUDITOR_MODEL}) must differ from every GENERATOR_MODELS entry.")
 
 PERSONAS = json.loads((ROOT / "data" / "personas.json").read_text(encoding="utf-8"))
 

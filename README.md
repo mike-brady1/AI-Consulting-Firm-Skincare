@@ -40,6 +40,22 @@ python src/run_eval.py        # vraie exécution baseline vs candidat sur tests/
 python src/diffusion_experiment.py --model stabilityai/sdxl-turbo   # GPU recommandé (Colab T4)
 ```
 
+## Fournisseurs et clés API
+
+Quatre fournisseurs, un compte (et une clé) par fournisseur : les crédits s'achètent par fournisseur, pas par modèle.
+Un seul compte par fournisseur suffit pour l'équipe (inviter les membres) ; chaque personne qui lance `run_eval.py`
+a besoin des quatre clés dans son `.env`.
+
+| Fournisseur | Modèle (`.env.example`) | Rôles | Clé |
+|---|---|---|---|
+| Anthropic | `claude-sonnet-5-5` | orchestrateur, générateur « croissance » | `ANTHROPIC_API_KEY` |
+| OpenAI | `gpt-4o-mini` | générateur « coûts », personas, baseline | `OPENAI_API_KEY` |
+| Google | `gemini-flash-latest` | générateur « marque » | `GEMINI_API_KEY` |
+| Mistral | `mistral-large-latest` | auditeur (différent de tous les générateurs) | `MISTRAL_API_KEY` |
+
+Pour revenir à trois fournisseurs, retirer l'entrée `gemini/...` de `GENERATOR_MODELS`.
+Les alias `...-latest` évoluent : la version réellement utilisée est notée dans les traces (`model_served`).
+
 ## Où sont les preuves
 
 | Livrable demandé | Fichier |
