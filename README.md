@@ -8,6 +8,8 @@ aux KPI et recommande le meilleur scénario (ou une fusion de plusieurs).
 
 ## Architecture
 
+Schéma complet (Whiteboard) : https://claude.ai/artifact/VgJqsrKfx9WbgWsxbmCYca — contexte pour Claude Code : `CLAUDE.md`.
+
 ```
 Objectifs client ─► Orchestrateur (MT) ─► Générateurs (multi-LLM) ─► Visuels (diffusion)
                                                                           │
