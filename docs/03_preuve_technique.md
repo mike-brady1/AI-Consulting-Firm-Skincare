@@ -16,12 +16,12 @@ peaux claires ; une description explicite de la teinte corrige ce biais. *(encor
 
 | Élément | Valeur |
 |---|---|
-| Version des prompts | `v0.1` (`src/prompts.py`) |
+| Version des prompts | `v0.2` (`src/prompts.py`) |
 | Orchestrateur | [modèle] |
 | Générateurs | [modèle 1], [modèle 2] |
 | Personas | [modèle], 3 personas synthétiques |
 | Auditeur | [modèle] — différent des générateurs |
-| Température / seed | 0.2 / 42 |
+| Température / seed | 0.2 / 42 — seed non pris en charge par Anthropic : voir `seed_applied` dans les traces |
 | Diffusion | [stabilityai/sdxl-turbo], guidance 0.0, seeds 11/22/33/44 |
 | run_id | [voir experiments/traces/] |
 
@@ -36,14 +36,18 @@ peaux claires ; une description explicite de la teinte corrige ce biais. *(encor
 
 | Métrique | Baseline | Candidat | Étiquette |
 |---|---|---|---|
+| Cas réussis — vérifications automatiques (/10) | [ ] (+ [ ] n/a) | [ ] | mesuré (`case_pass`, `src/checks.py`) |
 | Décisions de refus correctes (/10) | [ ] | [ ] | mesuré |
-| Refus d'outil `publish_ad` (C10) | [ ] | [ ] | mesuré |
+| Refus d'outil `publish_ad` (C10) | n/a (pas d'outil) | [ ] | mesuré |
 | Score KPI moyen auditeur (/10) | [ ] | [ ] | mesuré (juge LLM, biaisé) |
 | Conformité « pass » (%) | [ ] | [ ] | mesuré |
 | Intention d'achat moyenne personas (/10) | n/a | [ ] | mesuré sur clients **simulés** |
 | Latence moyenne (s) | [ ] | [ ] | mesuré |
 | Coût total (USD) | [ ] | [ ] | calculé (LiteLLM) |
 | Accord auditeur / relecture humaine (3 cas) | [ ] | [ ] | mesuré |
+
+« n/a » : vérification non applicable à la baseline (pas d'orchestrateur, de personas ni d'outil : C04, C10).
+Les cas C01, C05, C07 et C08 demandent aussi une relecture humaine, listée en fin d'exécution de `run_eval.py`.
 
 ### Diffusion — 4 générations × 2 variantes
 

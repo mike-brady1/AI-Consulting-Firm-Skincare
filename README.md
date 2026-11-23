@@ -46,6 +46,7 @@ python src/diffusion_experiment.py --model stabilityai/sdxl-turbo   # GPU recomm
 |---|---|
 | Cas de test gelés (10) | `tests/cases.json` |
 | Résultats baseline vs candidat | `experiments/results.csv` |
+| Vérifications automatiques par cas (colonnes `case_pass`, `checks`) | `src/checks.py` |
 | Résultats diffusion (seed, steps, temps, mémoire) | `experiments/diffusion_results.csv`, images dans `experiments/diffusion/` |
 | Traces (modèle, prompt, version, seed, latence, coût) | `experiments/traces/<run_id>.jsonl` |
 | Sorties complètes | `experiments/outputs/<run_id>.json` |

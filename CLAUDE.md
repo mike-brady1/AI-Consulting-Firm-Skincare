@@ -37,9 +37,12 @@ Architecture diagram (Whiteboard): https://claude.ai/artifact/VgJqsrKfx9WbgWsxbm
 
 - `src/pipeline.py` — candidate chain (orchestrator → generators → personas → auditor → best) and single-LLM baseline
 - `src/prompts.py` — all prompts; **bump `PROMPT_VERSION` on every prompt change**
-- `src/llm.py` — LiteLLM wrapper, JSONL tracing to `experiments/traces/`, `MOCK=1` offline mode
+- `src/llm.py` — LiteLLM wrapper, JSONL tracing to `experiments/traces/`, `MOCK=1` offline mode.
+  `seed` is only sent to providers that accept it (not Anthropic); traces record `seed_applied`
 - `src/tools.py` — permission gate; `publish_ad` is always refused (human approval required)
 - `src/run_eval.py` — runs baseline vs candidate on `tests/cases.json` → `experiments/results.csv`
+- `src/checks.py` — automated per-case checks mirroring each case's `verification` text (`case_pass` column).
+  A new test case needs an entry in `CASE_CHECKS`; without one only the refusal decision is checked
 - `src/diffusion_experiment.py` — 4 visuals × (baseline 1 step vs candidate 4 steps), fixed seeds, Fitzpatrick skin-tone check
 - `tests/cases.json` — 10 frozen test cases (normal, limit, error, refusal, refused tool action). **Don't edit frozen cases**; add new ones with new ids
 - `data/personas.json` — synthetic personas

@@ -1,19 +1,24 @@
 """Prompts for every agent. Bump PROMPT_VERSION whenever a prompt changes."""
 
-PROMPT_VERSION = "v0.1"
+PROMPT_VERSION = "v0.2"
 
-COMPLIANCE_RULES = (
+# Content rules: a request that needs one of these is refused by the orchestrator.
+CONTENT_RULES = (
     "Règles cosmétiques UE (règlement 1223/2009, critères d'allégations 655/2013) : "
     "aucune allégation thérapeutique (guérir, traiter une maladie), aucune promesse non prouvée, "
-    "aucun faux avis ni faux résultat avant/après, pas de publication sans validation humaine."
+    "aucun faux avis ni faux résultat avant/après"
 )
+# Publishing without approval is not a refusal ground: the tool gate (src/tools.py) blocks it.
+COMPLIANCE_RULES = CONTENT_RULES + ", pas de publication sans validation humaine."
 
 ORCHESTRATOR = f"""Tu es l'orchestrateur d'un cabinet de conseil IA spécialisé en skincare.
 À partir de l'objectif client, tu dois :
-1. refuser si la demande exige une pratique interdite. {COMPLIANCE_RULES}
+1. refuser uniquement si la demande exige un contenu interdit. {CONTENT_RULES}.
 2. sinon, traduire l'objectif en 1 à 3 KPI mesurables (marque "hypothese": true si un chiffre n'est pas fourni par le client).
 3. signaler si l'objectif est trop vague (needs_clarification) ou contradictoire (conflicts).
-4. lister les actions outils demandées par le client (ex: "publish_ad").
+4. lister les actions outils demandées par le client (ex: "publish_ad" pour publier une campagne).
+   Une demande d'action, même sans validation humaine, n'est PAS un motif de refus : liste-la dans
+   requested_actions, le système de permissions décidera.
 Réponds UNIQUEMENT en JSON :
 {{"refuse": bool, "refusal_reason": str, "needs_clarification": bool, "conflicts": [str],
   "kpis": [{{"name": str, "target": str, "hypothese": bool}}], "requested_actions": [str]}}"""
@@ -34,6 +39,8 @@ Réponds UNIQUEMENT en JSON : {{"purchase_intent": int (1-10), "reason": str}}""
 
 AUDITOR = f"""Tu es l'auditeur indépendant. Évalue le scénario par rapport aux KPI de l'objectif client.
 {COMPLIANCE_RULES}
+mentions_conflict = true si le scénario signale explicitement une tension ou une contradiction entre
+les objectifs du client (dans tradeoffs ou risks), sinon false.
 Réponds UNIQUEMENT en JSON :
 {{"kpi_score": int (0-10), "compliance": "pass" | "fail", "issues": [str], "mentions_conflict": bool}}"""
 
