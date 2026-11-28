@@ -19,7 +19,7 @@ peaux claires ; une description explicite de la teinte corrige ce biais. *(encor
 | Version des prompts | `v0.2` (`src/prompts.py`) |
 | Orchestrateur | [modèle] |
 | Générateurs | [modèle 1], [modèle 2], [modèle 3] |
-| Personas | [modèle], 3 personas synthétiques |
+| Personas | [modèle], 30 personas synthétiques (phototypes I à VI équilibrés) |
 | Auditeur | [modèle] — différent des générateurs |
 | Température / seed | 0.2 / 42 — Claude Sonnet 5.5 n'accepte ni température ni seed (raisonnement toujours actif) : voir `temperature_applied` et `seed_applied` dans les traces |
 | Diffusion | [stabilityai/sdxl-turbo], guidance 0.0, seeds 11/22/33/44 |
@@ -42,12 +42,23 @@ peaux claires ; une description explicite de la teinte corrige ce biais. *(encor
 | Score KPI moyen auditeur (/10) | [ ] | [ ] | mesuré (juge LLM, biaisé) |
 | Conformité « pass » (%) | [ ] | [ ] | mesuré |
 | Intention d'achat moyenne personas (/10) | n/a | [ ] | mesuré sur clients **simulés** |
+| Appels personas utilisés par le bandit (/ exhaustif) | n/a | [ ] | mesuré |
 | Latence moyenne (s) | [ ] | [ ] | mesuré |
 | Coût total (USD) | [ ] | [ ] | calculé (LiteLLM) |
 | Accord auditeur / relecture humaine (3 cas) | [ ] | [ ] | mesuré |
 
 « n/a » : vérification non applicable à la baseline (pas d'orchestrateur, de personas ni d'outil : C04, C10).
 Les cas C01, C05, C07 et C08 demandent aussi une relecture humaine, listée en fin d'exécution de `run_eval.py`.
+
+### Bandit — rejeu hors ligne (`src/bandit_eval.py`)
+
+| Plafond d'appels | Bandit : gagnant retrouvé (%) | Bandit : appels économisés (%) | Uniforme : gagnant retrouvé (%) | Étiquette |
+|---|---|---|---|---|
+| 33 % | [ ] | [ ] | [ ] | mesuré sur clients simulés (rejeu) |
+| 50 % | [ ] | [ ] | [ ] | mesuré sur clients simulés (rejeu) |
+| 100 % | [ ] | [ ] | [ ] | mesuré sur clients simulés (rejeu) |
+
+Le « gagnant » de référence est celui du test exhaustif (chaque scénario × chaque client) sur la même exécution.
 
 ### Diffusion — 4 générations × 2 variantes
 

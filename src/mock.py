@@ -1,4 +1,9 @@
-"""Canned answers for MOCK=1 (offline plumbing test). Not a model, not a result."""
+"""Canned answers for MOCK=1 (offline plumbing test). Not a model, not a result.
+
+Persona intents vary deterministically with the persona and the scenario text (hash), so the bandit has
+something to tell apart offline. The numbers mean nothing.
+"""
+import hashlib
 import json
 
 FORBIDDEN = ["guérit", "guerit", "faux avis", "avant/après", "avant/apres"]
@@ -16,11 +21,12 @@ def mock_answer(role: str, user: str) -> str:
     if role.startswith("generator") or role == "baseline":
         if role == "baseline" and any(w in text for w in FORBIDDEN):
             return json.dumps({"refuse": True, "refusal_reason": "mock"})
-        return json.dumps({"title": "Mock scenario", "how": ["a"], "who": ["b"],
+        return json.dumps({"title": f"Mock scenario ({role})", "how": ["a"], "who": ["b"],
                            "figures": [{"kpi": "ventes", "estimate": "+12%", "hypothese": True}],
                            "channels": ["instagram"], "claims": [], "tradeoffs": [], "risks": []})
     if role.startswith("persona"):
-        return json.dumps({"purchase_intent": 6, "reason": "mock"})
+        h = int(hashlib.sha256((role + user).encode("utf-8")).hexdigest(), 16)
+        return json.dumps({"purchase_intent": 3 + h % 7, "reason": "mock"})
     if role == "auditor":
         return json.dumps({"kpi_score": 6, "compliance": "pass", "issues": [], "mentions_conflict": False})
     return "{}"

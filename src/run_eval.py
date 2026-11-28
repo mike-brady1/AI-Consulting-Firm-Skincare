@@ -20,7 +20,7 @@ except ImportError:
 import checks as C
 import prompts as P
 from llm import MOCK, run_id
-from pipeline import run_baseline, run_candidate
+from pipeline import PERSONA_BUDGET, PERSONA_MODE, PERSONAS, run_baseline, run_candidate
 
 ROOT = Path(__file__).resolve().parent.parent
 CASES = json.loads((ROOT / "tests" / "cases.json").read_text(encoding="utf-8"))
@@ -28,7 +28,8 @@ RESULTS = ROOT / "experiments" / "results.csv"
 FIELDS = ["run_id", "mode", "prompt_version", "case_id", "category", "system",
           "case_pass", "checks", "manual_review", "refused",
           "expected_refusal", "refusal_correct", "tool_refusal_expected", "tool_refusal_ok",
-          "kpi_score", "compliance", "persona_avg", "mentions_conflict",
+          "kpi_score", "compliance", "persona_avg", "persona_mode", "persona_calls", "persona_calls_exhaustive",
+          "mentions_conflict",
           "needs_clarification", "orchestrator_conflicts", "figures_hypothese",
           "latency_s", "cost_usd", "status"]
 LABEL = {True: "pass", False: "fail", None: "n/a"}
@@ -58,6 +59,8 @@ def row(case, system, out):
         "tool_refusal_expected": tool_expected, "tool_refusal_ok": tool_ok,
         "kpi_score": audit.get("kpi_score", ""), "compliance": audit.get("compliance", ""),
         "persona_avg": "" if best.get("persona_avg") is None else round(best["persona_avg"], 2),
+        "persona_mode": out.get("persona_mode", ""), "persona_calls": out.get("persona_calls", ""),
+        "persona_calls_exhaustive": out.get("persona_calls_exhaustive", ""),
         "mentions_conflict": audit.get("mentions_conflict", ""),
         "needs_clarification": plan.get("needs_clarification", "") if has_orchestrator else "n/a",
         "orchestrator_conflicts": len(plan.get("conflicts") or []) if plan else ("" if has_orchestrator else "n/a"),
@@ -79,7 +82,9 @@ def check_results_header():
 
 def main():
     check_results_header()
-    rows, outputs = [], {}
+    rows = []
+    outputs = {"_meta": {"run_id": run_id(), "mode": "mock" if MOCK else "real", "prompt_version": P.PROMPT_VERSION,
+                         "persona_mode": PERSONA_MODE, "persona_budget": PERSONA_BUDGET, "n_personas": len(PERSONAS)}}
     for case in CASES:
         for system, fn in (("baseline", run_baseline), ("candidate", run_candidate)):
             try:
@@ -113,6 +118,12 @@ def main():
         avg = sum(scores) / len(scores) if scores else float("nan")
         print(f"[{system}] cases passed: {passed}/{len(rs)} (failed {failed}, n/a {na}) | "
               f"correct refusal decisions: {ok}/{len(rs)} | mean KPI score: {avg:.2f}")
+    cand = [r for r in rows if r["system"] == "candidate" and r["persona_calls"] != ""]
+    used = sum(r["persona_calls"] for r in cand)
+    full = sum(r["persona_calls_exhaustive"] for r in cand)
+    if full:
+        print(f"[candidate] persona calls ({PERSONA_MODE}): {used} of {full} for exhaustive testing "
+              f"({100 * (1 - used / full):.0f}% saved)")
     manual = sorted({(r["case_id"], r["manual_review"]) for r in rows if r["manual_review"]})
     if manual:
         print(f"Manual review needed (outputs in experiments/outputs/{run_id()}.json):")

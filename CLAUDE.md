@@ -28,17 +28,22 @@ Architecture diagram (Whiteboard): https://claude.ai/artifact/VgJqsrKfx9WbgWsxbm
 |---|---|---|
 | Orchestrator ("MT") | LLM | Objective → KPIs, detects vague/contradictory goals, refuses forbidden requests, lists requested tool actions, runs the loop |
 | Scenario generators | Multi-LLM | 2–3 different providers, each with a consulting style (growth, cost, brand) — diversity is the point |
-| Client simulators | LLM | Persona agents by skin type, concern, age, budget, channel. Cheap model, many calls |
+| Client simulators | LLM | Persona agents by skin type, concern, age, budget, channel. Cheap model, many calls. 30 personas, phototypes I–VI balanced (`src/make_personas.py`) |
 | Synthetic client base | Gen AI | Personas must be grounded in real/authorised market data, otherwise they stay "encore hypothétique" |
 | Visual creatives | **Diffusion** | Ad visuals / packaging per scenario (SDXL-Turbo, Flux). Required: the official brief demands a diffusion experiment |
 | Auditor | LLM | **Must be a different model from the generators** (no model grades its own work; `pipeline.py` refuses to start otherwise). KPI score + compliance |
-| Model bandit | Classic algorithm | Thompson sampling / UCB to allocate simulation budget to promising scenarios. Not an LLM |
+| Model bandit | Classic algorithm | **Implemented** (`src/bandit.py`): top-two Thompson sampling, Gaussian posterior, early stop at 95 %. Allocates persona calls to compliant scenarios. Not an LLM |
 | Merger | LLM | Combines top scenarios, must check the result is still coherent |
 | Mini Netflix | UI | Ranked scenario cards: *comment* (how), *qui* (who), *chiffre* (figures). Crown = winner |
 
 ## Repo layout
 
-- `src/pipeline.py` — candidate chain (orchestrator → generators → personas → auditor → best) and single-LLM baseline
+- `src/pipeline.py` — candidate chain (orchestrator → generators → auditor → personas via bandit → best) and single-LLM baseline.
+  `PERSONA_MODE=bandit` (default) or `exhaustive` (every compliant scenario × every persona)
+- `src/bandit.py` — top-two Thompson sampling + early stopping, and the uniform control; no LLM
+- `src/bandit_eval.py` — offline replay on an exhaustive run: bandit vs uniform, winner found and calls saved
+- `src/make_personas.py` — regenerates `data/personas.json` (seeded; P1–P3 kept)
+- `tests/test_bandit.py` — bandit tests on synthetic data (`python tests/test_bandit.py`)
 - `src/prompts.py` — all prompts; **bump `PROMPT_VERSION` on every prompt change**
 - `src/llm.py` — LiteLLM wrapper, JSONL tracing to `experiments/traces/`, `MOCK=1` offline mode.
   `seed` is only sent to providers that accept it (not Anthropic) and `temperature` only to models that accept it
@@ -49,7 +54,7 @@ Architecture diagram (Whiteboard): https://claude.ai/artifact/VgJqsrKfx9WbgWsxbm
   A new test case needs an entry in `CASE_CHECKS`; without one only the refusal decision is checked
 - `src/diffusion_experiment.py` — 4 visuals × (baseline 1 step vs candidate 4 steps), fixed seeds, Fitzpatrick skin-tone check
 - `tests/cases.json` — 10 frozen test cases (normal, limit, error, refusal, refused tool action). **Don't edit frozen cases**; add new ones with new ids
-- `data/personas.json` — synthetic personas
+- `data/personas.json` — 30 synthetic personas (encore hypothétique)
 - `docs/03_preuve_technique.md` — C3 report template (French)
 
 Commands:
@@ -89,6 +94,7 @@ python src/diffusion_experiment.py --model stabilityai/sdxl-turbo   # needs a GP
 1. Real run of `run_eval.py` with API keys; fill the table in `docs/03_preuve_technique.md`.
 2. Diffusion run on GPU; annotate `skin_tone_ok_manual` and `quality_note` in `experiments/diffusion_results.csv`.
 3. Human review of 3 auditor outputs.
-4. Replace the simple `combined` score in `run_candidate` with a bandit (Thompson sampling) and add the merge step.
+4. Bandit done (`src/bandit.py`). Run `PERSONA_MODE=exhaustive` once with real keys, replay with `src/bandit_eval.py`,
+   report winner found / calls saved vs uniform. Then add the merge step.
 5. Feed diffusion visuals to vision-capable persona agents.
 6. Build the Mini Netflix interface.

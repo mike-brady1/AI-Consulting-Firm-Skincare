@@ -11,22 +11,23 @@ aux KPI et recommande le meilleur scénario (ou une fusion de plusieurs).
 Schéma complet (Whiteboard) : https://claude.ai/artifact/VgJqsrKfx9WbgWsxbmCYca — contexte pour Claude Code : `CLAUDE.md`.
 
 ```
-Objectifs client ─► Orchestrateur (MT) ─► Générateurs (multi-LLM) ─► Visuels (diffusion)
-                                                                          │
-              Base clients synthétique ─► Personas simulés ◄──────────────┘
+Objectifs client ─► Orchestrateur (MT) ─► Générateurs (multi-LLM) ─► Auditeur (LLM différent : KPI + conformité UE)
+                                                                                 │ scénarios conformes
+          Base clients synthétique (30) ─► Personas simulés ◄── Bandit (Thompson) ◄─┘
                                                 │ réactions
-Mini Netflix ◄─ Fusion ◄─ Bandit (Thompson/UCB) ◄─ Auditeur (LLM différent : KPI + conformité UE)
+                    Mini Netflix ◄─ Fusion ◄─ Meilleur scénario          Visuels (diffusion) : expérience à part
 ```
 
 | Rôle | Type | Statut C3 |
 |---|---|---|
 | Orchestrateur | LLM | implémenté (`src/pipeline.py`) |
 | Générateurs de scénarios (2–3 LLM, styles différents) | Multi-LLM | implémenté |
-| Personas clients simulés | LLM | implémenté (3 personas, `data/personas.json`) |
+| Personas clients simulés | LLM | implémenté (30 personas, phototypes I à VI équilibrés, `data/personas.json`) |
 | Auditeur (KPI + allégations cosmétiques UE) | LLM | implémenté |
 | Outil `publish_ad` (validation humaine obligatoire) | Agent / outil | implémenté (refus systématique) |
 | Visuels publicitaires | Diffusion | script d'expérience (`src/diffusion_experiment.py`) |
-| Bandit, fusion de scénarios, interface « Mini Netflix » | — | prochaines séances |
+| Bandit (Thompson sampling « top-two » + arrêt anticipé) | Algorithme classique | implémenté (`src/bandit.py`) |
+| Fusion de scénarios, interface « Mini Netflix » | — | prochaines séances |
 
 ## Lancer la preuve technique (C3)
 
@@ -39,6 +40,27 @@ python src/run_eval.py        # vraie exécution baseline vs candidat sur tests/
 
 python src/diffusion_experiment.py --model stabilityai/sdxl-turbo   # GPU recommandé (Colab T4)
 ```
+
+## Bandit : tester moins de clients, trouver le même gagnant
+
+Chaque scénario conforme est un « bras » ; un tirage = un client simulé qui lit le scénario
+(récompense = (score KPI de l'auditeur + intention d'achat) / 20). Le bandit (`src/bandit.py`) teste chaque
+scénario sur 3 clients, puis envoie les clients suivants aux scénarios les plus prometteurs (Thompson sampling
+« top-two ») et s'arrête dès que le gagnant est probable à 95 %, ou au bout de `PERSONA_BUDGET` appels (30 par défaut,
+contre 90 pour tout tester : 3 scénarios × 30 clients). Les scénarios non conformes ne consomment aucun appel.
+
+```bash
+python tests/test_bandit.py                                   # tests sur données synthétiques (sans clé API)
+PERSONA_MODE=exhaustive python src/run_eval.py                # référence : chaque scénario × chaque client
+python src/bandit_eval.py experiments/outputs/<run_id>.json   # rejeu hors ligne : bandit vs répartition uniforme
+```
+
+Le rejeu mesure, sur les réactions enregistrées, combien de fois le bandit retrouve le gagnant du test exhaustif et
+combien d'appels il économise, face à une répartition uniforme avec la même règle d'arrêt.
+Sur données synthétiques (`tests/test_bandit.py`, *calculé*), les deux méthodes trouvent le gagnant dans 80 à 99 %
+des cas avec 14 à 25 appels au lieu de 90 ; le bandit fait aussi bien ou un peu mieux (0 à 4 points). L'essentiel de
+l'économie vient de l'arrêt anticipé. Résultat réel : *encore hypothétique* jusqu'au rejeu sur une vraie exécution.
+Pour régénérer la base de clients : `python src/make_personas.py --n 30 --seed 2026`.
 
 ## Fournisseurs et clés API
 
@@ -66,6 +88,7 @@ Les alias `...-latest` évoluent : la version réellement utilisée est notée d
 | Résultats diffusion (seed, steps, temps, mémoire) | `experiments/diffusion_results.csv`, images dans `experiments/diffusion/` |
 | Traces (modèle, prompt, version, seed, latence, coût) | `experiments/traces/<run_id>.jsonl` |
 | Sorties complètes | `experiments/outputs/<run_id>.json` |
+| Rejeu du bandit (gagnant retrouvé, appels économisés) | `experiments/bandit_<run_id>.csv` |
 | Document de preuve technique | `docs/03_preuve_technique.md` |
 
 ## Données et sécurité
@@ -81,5 +104,6 @@ Les alias `...-latest` évoluent : la version réellement utilisée est notée d
 | Exécuter `run_eval.py` avec les vraies clés et remplir le tableau du doc C3 | _à compléter_ |
 | Exécuter l'expérience diffusion et annoter les images (teinte de peau, qualité) | _à compléter_ |
 | Relecture humaine de 3 sorties de l'auditeur | _à compléter_ |
-| Bandit (Thompson sampling) + fusion de scénarios | _à compléter_ |
+| Exécution exhaustive + rejeu du bandit (`bandit_eval.py`) | _à compléter_ |
+| Fusion de scénarios | _à compléter_ |
 | Interface « Mini Netflix » | _à compléter_ |

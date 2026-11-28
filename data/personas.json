@@ -25,5 +25,248 @@
     "budget": "élevé (> 40 €)",
     "channels": "parfumerie, e-shop, conseil en boutique",
     "note": "Persona synthétique — encore hypothétique."
+  },
+  {
+    "id": "P4",
+    "label": "Jeune actif 22 ans, peau sensible, marques post-acné, budget élevé",
+    "skin": "sensible, marques post-acné, phototype III",
+    "age": 22,
+    "budget": "élevé (> 40 €)",
+    "channels": "marketplace (Amazon), TikTok",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P5",
+    "label": "Infirmière 39 ans, peau grasse, rougeurs, budget élevé",
+    "skin": "grasse, rougeurs, phototype II",
+    "age": 39,
+    "budget": "élevé (> 40 €)",
+    "channels": "grande surface, Instagram",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P6",
+    "label": "Retraité 67 ans, peau normale, sécheresse, budget faible",
+    "skin": "normale, sécheresse, phototype II",
+    "age": 67,
+    "budget": "faible (< 15 € par produit)",
+    "channels": "conseil en boutique, parfumerie",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P7",
+    "label": "Jeune actif 19 ans, peau normale, déshydratation, budget moyen",
+    "skin": "normale, déshydratation, phototype I",
+    "age": 19,
+    "budget": "moyen (15-40 €)",
+    "channels": "marketplace (Amazon), grande surface",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P8",
+    "label": "Commerçant 40 ans, peau sensible, déshydratation, budget élevé",
+    "skin": "sensible, déshydratation, phototype VI",
+    "age": 40,
+    "budget": "élevé (> 40 €)",
+    "channels": "newsletter, grande surface",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P9",
+    "label": "Enseignante 58 ans, peau mixte, taches pigmentaires, budget faible",
+    "skin": "mixte, taches pigmentaires, phototype II",
+    "age": 58,
+    "budget": "faible (< 15 € par produit)",
+    "channels": "pharmacie, parfumerie",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P10",
+    "label": "Jeune actif 28 ans, peau sensible, marques post-acné, budget moyen",
+    "skin": "sensible, marques post-acné, phototype V",
+    "age": 28,
+    "budget": "moyen (15-40 €)",
+    "channels": "Instagram, pharmacie",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P11",
+    "label": "Mère de famille 41 ans, peau normale, déshydratation, budget moyen",
+    "skin": "normale, déshydratation, phototype VI",
+    "age": 41,
+    "budget": "moyen (15-40 €)",
+    "channels": "newsletter, Instagram",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P12",
+    "label": "Artisan 54 ans, peau normale, rides, budget moyen",
+    "skin": "normale, rides, phototype VI",
+    "age": 54,
+    "budget": "moyen (15-40 €)",
+    "channels": "newsletter, e-shop de la marque",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P13",
+    "label": "Étudiant 25 ans, peau normale, marques post-acné, budget faible",
+    "skin": "normale, marques post-acné, phototype I",
+    "age": 25,
+    "budget": "faible (< 15 € par produit)",
+    "channels": "pharmacie, grande surface",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P14",
+    "label": "Cadre 35 ans, peau grasse, premières rides, budget faible",
+    "skin": "grasse, premières rides, phototype III",
+    "age": 35,
+    "budget": "faible (< 15 € par produit)",
+    "channels": "newsletter, Instagram",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P15",
+    "label": "Cadre 47 ans, peau normale, rougeurs, budget élevé",
+    "skin": "normale, rougeurs, phototype I",
+    "age": 47,
+    "budget": "élevé (> 40 €)",
+    "channels": "pharmacie, parfumerie",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P16",
+    "label": "Étudiante 21 ans, peau sensible, imperfections, budget élevé",
+    "skin": "sensible, imperfections, phototype III",
+    "age": 21,
+    "budget": "élevé (> 40 €)",
+    "channels": "pharmacie, marketplace (Amazon)",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P17",
+    "label": "Cadre 32 ans, peau mixte, déshydratation, budget élevé",
+    "skin": "mixte, déshydratation, phototype I",
+    "age": 32,
+    "budget": "élevé (> 40 €)",
+    "channels": "newsletter, pharmacie",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P18",
+    "label": "Enseignante 62 ans, peau normale, rougeurs, budget faible",
+    "skin": "normale, rougeurs, phototype V",
+    "age": 62,
+    "budget": "faible (< 15 € par produit)",
+    "channels": "newsletter, e-shop de la marque",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P19",
+    "label": "Jeune actif 19 ans, peau grasse, brillance, budget élevé",
+    "skin": "grasse, brillance, phototype IV",
+    "age": 19,
+    "budget": "élevé (> 40 €)",
+    "channels": "pharmacie, grande surface",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P20",
+    "label": "Infirmière 36 ans, peau sensible, taches pigmentaires, budget moyen",
+    "skin": "sensible, taches pigmentaires, phototype IV",
+    "age": 36,
+    "budget": "moyen (15-40 €)",
+    "channels": "Instagram, grande surface",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P21",
+    "label": "Cadre 57 ans, peau sèche, taches pigmentaires, budget élevé",
+    "skin": "sèche, taches pigmentaires, phototype IV",
+    "age": 57,
+    "budget": "élevé (> 40 €)",
+    "channels": "e-shop de la marque, pharmacie",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P22",
+    "label": "Jeune actif 18 ans, peau mixte, pores dilatés, budget moyen",
+    "skin": "mixte, pores dilatés, phototype IV",
+    "age": 18,
+    "budget": "moyen (15-40 €)",
+    "channels": "pharmacie, TikTok",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P23",
+    "label": "Mère de famille 37 ans, peau sensible, déshydratation, budget faible",
+    "skin": "sensible, déshydratation, phototype V",
+    "age": 37,
+    "budget": "faible (< 15 € par produit)",
+    "channels": "pharmacie, grande surface",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P24",
+    "label": "Retraité 58 ans, peau mixte, sécheresse, budget élevé",
+    "skin": "mixte, sécheresse, phototype II",
+    "age": 58,
+    "budget": "élevé (> 40 €)",
+    "channels": "parfumerie, pharmacie",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P25",
+    "label": "Jeune actif 26 ans, peau sèche, brillance, budget élevé",
+    "skin": "sèche, brillance, phototype VI",
+    "age": 26,
+    "budget": "élevé (> 40 €)",
+    "channels": "Instagram, TikTok",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P26",
+    "label": "Père de famille 40 ans, peau sèche, premières rides, budget élevé",
+    "skin": "sèche, premières rides, phototype V",
+    "age": 40,
+    "budget": "élevé (> 40 €)",
+    "channels": "pharmacie, newsletter",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P27",
+    "label": "Cadre 67 ans, peau grasse, rougeurs, budget faible",
+    "skin": "grasse, rougeurs, phototype VI",
+    "age": 67,
+    "budget": "faible (< 15 € par produit)",
+    "channels": "newsletter, parfumerie",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P28",
+    "label": "Étudiant 20 ans, peau normale, pores dilatés, budget moyen",
+    "skin": "normale, pores dilatés, phototype IV",
+    "age": 20,
+    "budget": "moyen (15-40 €)",
+    "channels": "marketplace (Amazon), grande surface",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P29",
+    "label": "Cadre 43 ans, peau normale, teint terne, budget faible",
+    "skin": "normale, teint terne, phototype III",
+    "age": 43,
+    "budget": "faible (< 15 € par produit)",
+    "channels": "e-shop de la marque, pharmacie",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
+  },
+  {
+    "id": "P30",
+    "label": "Retraitée 53 ans, peau normale, sécheresse, budget moyen",
+    "skin": "normale, sécheresse, phototype I",
+    "age": 53,
+    "budget": "moyen (15-40 €)",
+    "channels": "conseil en boutique, parfumerie",
+    "note": "Persona synthétique — encore hypothétique, à ancrer sur des données de marché autorisées."
   }
 ]
