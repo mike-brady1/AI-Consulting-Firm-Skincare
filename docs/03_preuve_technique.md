@@ -7,7 +7,8 @@
 
 Un système multi-LLM (orchestrateur + générateurs multiples + clients simulés + auditeur indépendant) produit
 des recommandations stratégiques skincare **mieux alignées sur les KPI du client et plus conformes** à la
-réglementation cosmétique UE qu'un LLM unique avec un seul prompt. *(encore hypothétique)*
+réglementation cosmétique UE qu'un LLM unique avec un seul prompt, **y compris quand ce LLM unique produit
+autant de brouillons et choisit le meilleur avec la même sélection** (baseline best-of-N). *(encore hypothétique)*
 
 Hypothèse diffusion : sans précision de teinte de peau, le modèle de diffusion génère majoritairement des
 peaux claires ; une description explicite de la teinte corrige ce biais. *(encore hypothétique)*
@@ -27,27 +28,35 @@ peaux claires ; une description explicite de la teinte corrige ce biais. *(encor
 
 ## 3. Baseline
 
-- **LLM :** un seul modèle ([modèle]), un seul prompt « donne une recommandation stratégique », noté par le même auditeur.
+- **Baseline simple :** un seul modèle ([modèle]), un seul prompt « donne une recommandation stratégique », un seul brouillon.
+- **Baseline best-of-N :** le même modèle et le même prompt, N = 3 brouillons (température 0,7, seeds 42 à 44), puis
+  **la même sélection que le candidat** (audit, puis clients simulés via le bandit). Refus si la majorité des brouillons refuse.
+- **Même étalon :** tous les audits (candidat et baselines) reçoivent les KPI de l'orchestrateur du candidat.
+
+Pourquoi : le candidat choisit le meilleur de ses N scénarios. Face à la seule baseline simple, un meilleur score
+pourrait venir de ce choix et non de l'approche multi-LLM. **La comparaison qui compte est candidat vs best-of-N.**
+La ligne « tous les brouillons » donne la même comparaison sans aucune sélection.
 - **Diffusion :** 1 pas de débruitage (NFE = 1), prompt sans teinte de peau.
 
 ## 4. Résultats
 
 ### LLM — 10 cas (`tests/cases.json`)
 
-| Métrique | Baseline | Candidat | Étiquette |
-|---|---|---|---|
-| Cas réussis — vérifications automatiques (/10) | [ ] (+ [ ] n/a) | [ ] | mesuré (`case_pass`, `src/checks.py`) |
-| Décisions de refus correctes (/10) | [ ] | [ ] | mesuré |
-| Refus d'outil `publish_ad` (C10) | n/a (pas d'outil) | [ ] | mesuré |
-| Score KPI moyen auditeur (/10) | [ ] | [ ] | mesuré (juge LLM, biaisé) |
-| Conformité « pass » (%) | [ ] | [ ] | mesuré |
-| Intention d'achat moyenne personas (/10) | n/a | [ ] | mesuré sur clients **simulés** |
-| Appels personas utilisés par le bandit (/ exhaustif) | n/a | [ ] | mesuré |
-| Latence moyenne (s) | [ ] | [ ] | mesuré |
-| Coût total (USD) | [ ] | [ ] | calculé (LiteLLM) |
-| Accord auditeur / relecture humaine (3 cas) | [ ] | [ ] | mesuré |
+| Métrique | Baseline simple | Baseline best-of-N | Candidat | Étiquette |
+|---|---|---|---|---|
+| Cas réussis — vérifications automatiques (/10) | [ ] (+ [ ] n/a) | [ ] (+ [ ] n/a) | [ ] | mesuré (`case_pass`, `src/checks.py`) |
+| Décisions de refus correctes (/10) | [ ] | [ ] | [ ] | mesuré |
+| Refus d'outil `publish_ad` (C10) | n/a (pas d'outil) | n/a (pas d'outil) | [ ] | mesuré |
+| Score KPI auditeur, scénario choisi (/10) | [ ] | [ ] | [ ] | mesuré (juge LLM, biaisé) |
+| Score KPI auditeur, tous les brouillons, sans sélection (/10) | [ ] | [ ] | [ ] | mesuré (`kpi_mean_all`) |
+| Conformité « pass » (%) | [ ] | [ ] | [ ] | mesuré |
+| Intention d'achat moyenne personas (/10) | n/a | [ ] | [ ] | mesuré sur clients **simulés** |
+| Appels personas utilisés par le bandit (/ exhaustif) | n/a | [ ] | [ ] | mesuré |
+| Latence moyenne (s) | [ ] | [ ] | [ ] | mesuré |
+| Coût total (USD) | [ ] | [ ] | [ ] | calculé (LiteLLM) |
+| Accord auditeur / relecture humaine (3 cas) | [ ] | [ ] | [ ] | mesuré |
 
-« n/a » : vérification non applicable à la baseline (pas d'orchestrateur, de personas ni d'outil : C04, C10).
+« n/a » : vérification non applicable (baselines : pas d'orchestrateur ni d'outil, C10 ; baseline simple : pas de personas, C04).
 Les cas C01, C05, C07 et C08 demandent aussi une relecture humaine, listée en fin d'exécution de `run_eval.py`.
 
 ### Bandit — rejeu hors ligne (`src/bandit_eval.py`)

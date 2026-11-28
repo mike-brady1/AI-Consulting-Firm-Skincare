@@ -1,8 +1,8 @@
 """Automated per-case checks, mirroring the `verification` field of tests/cases.json.
 
 tests/cases.json is frozen, so the machine-readable version of each verification lives here.
-Each check returns True (pass), False (fail) or None (not applicable to this system: the baseline
-has no orchestrator, no personas and no tool gate). A case passes if every check passes, fails if
+Each check returns True (pass), False (fail) or None (not applicable to this system: the baselines
+have no orchestrator and no tool gate; the single-draft baseline has no personas either). A case passes if every check passes, fails if
 any check fails, and is "n/a" otherwise.
 
 Where a verification also needs a human (or is only approximated here), CASE_CHECKS gives a
@@ -12,9 +12,9 @@ Several checks rely on the LLM auditor, a biased judge: they are "mesuré (juge 
 import json
 import re
 
-NO_ORCHESTRATOR = {"baseline"}
+NO_ORCHESTRATOR = {"baseline", "baseline_bon"}
 NO_PERSONAS = {"baseline"}
-NO_TOOL_GATE = {"baseline"}
+NO_TOOL_GATE = {"baseline", "baseline_bon"}
 
 
 def _num(x):

@@ -1,4 +1,10 @@
-"""Run baseline vs candidate on the frozen test cases.
+"""Run the candidate and both baselines on the frozen test cases.
+
+Systems (src/pipeline.py): candidate (multi-LLM), baseline (one model, one draft) and baseline_bon
+(one model, N drafts, same selection as the candidate). The candidate runs first in each case: its
+orchestrator's KPIs are given to every audit, so all three systems are judged against the same targets.
+The fair comparison for generation quality is candidate vs baseline_bon; kpi_mean_all (mean auditor score
+of all drafts, before any selection) is the same comparison without selection.
 
 Usage:  python src/run_eval.py            (real models, needs API keys in .env)
         MOCK=1 python src/run_eval.py     (offline plumbing test, results are NOT valid)
@@ -20,7 +26,8 @@ except ImportError:
 import checks as C
 import prompts as P
 from llm import MOCK, run_id
-from pipeline import PERSONA_BUDGET, PERSONA_MODE, PERSONAS, run_baseline, run_candidate
+from pipeline import (BON_N, BON_TEMPERATURE, PERSONA_BUDGET, PERSONA_MODE, PERSONAS, kpi_score, run_baseline,
+                      run_baseline_bon, run_candidate)
 
 ROOT = Path(__file__).resolve().parent.parent
 CASES = json.loads((ROOT / "tests" / "cases.json").read_text(encoding="utf-8"))
@@ -28,11 +35,12 @@ RESULTS = ROOT / "experiments" / "results.csv"
 FIELDS = ["run_id", "mode", "prompt_version", "case_id", "category", "system",
           "case_pass", "checks", "manual_review", "refused",
           "expected_refusal", "refusal_correct", "tool_refusal_expected", "tool_refusal_ok",
-          "kpi_score", "compliance", "persona_avg", "persona_mode", "persona_calls", "persona_calls_exhaustive",
+          "kpi_score", "compliance", "kpi_mean_all", "n_scenarios", "n_compliant", "persona_avg", "persona_mode", "persona_calls", "persona_calls_exhaustive",
           "mentions_conflict",
           "needs_clarification", "orchestrator_conflicts", "figures_hypothese",
           "latency_s", "cost_usd", "status"]
 LABEL = {True: "pass", False: "fail", None: "n/a"}
+SYSTEMS = (("candidate", run_candidate), ("baseline", run_baseline), ("baseline_bon", run_baseline_bon))
 
 
 def row(case, system, out):
@@ -48,6 +56,8 @@ def row(case, system, out):
     has_orchestrator = system not in C.NO_ORCHESTRATOR
     produced = not out.get("refused") and "error" not in out
     marked, total = C.figures_hypothese_count(out)
+    drafts = out.get("scenarios") or []
+    kpi_all = [kpi_score(s.get("audit") or {}) for s in drafts]
     return {
         "run_id": run_id(), "mode": "mock" if MOCK else "real", "prompt_version": P.PROMPT_VERSION,
         "case_id": case["id"], "category": case["category"], "system": system,
@@ -58,6 +68,9 @@ def row(case, system, out):
         "refusal_correct": "" if "error" in out else out.get("refused", False) == case["expected_refusal"],
         "tool_refusal_expected": tool_expected, "tool_refusal_ok": tool_ok,
         "kpi_score": audit.get("kpi_score", ""), "compliance": audit.get("compliance", ""),
+        "kpi_mean_all": round(sum(kpi_all) / len(kpi_all), 2) if kpi_all else "",
+        "n_scenarios": len(drafts) if produced else "",
+        "n_compliant": sum(1 for s in drafts if (s.get("audit") or {}).get("compliance") == "pass") if produced else "",
         "persona_avg": "" if best.get("persona_avg") is None else round(best["persona_avg"], 2),
         "persona_mode": out.get("persona_mode", ""), "persona_calls": out.get("persona_calls", ""),
         "persona_calls_exhaustive": out.get("persona_calls_exhaustive", ""),
@@ -84,17 +97,22 @@ def main():
     check_results_header()
     rows = []
     outputs = {"_meta": {"run_id": run_id(), "mode": "mock" if MOCK else "real", "prompt_version": P.PROMPT_VERSION,
-                         "persona_mode": PERSONA_MODE, "persona_budget": PERSONA_BUDGET, "n_personas": len(PERSONAS)}}
+                         "persona_mode": PERSONA_MODE, "persona_budget": PERSONA_BUDGET, "n_personas": len(PERSONAS),
+                         "bon_n": BON_N, "bon_temperature": BON_TEMPERATURE}}
     for case in CASES:
-        for system, fn in (("baseline", run_baseline), ("candidate", run_candidate)):
+        kpis = []  # the candidate's KPIs, reused by both baselines' audits (same yardstick)
+        for system, fn in SYSTEMS:
             try:
-                out = fn(case["objective"])
+                out = fn(case["objective"]) if system == "candidate" else fn(case["objective"], kpis)
             except Exception as exc:  # keep going, log the failure as an incident
                 out = {"error": f"error: {type(exc).__name__}: {exc}"[:200]}
+            if system == "candidate":
+                plan_kpis = (out.get("plan") or {}).get("kpis")
+                kpis = plan_kpis if isinstance(plan_kpis, list) else []
             outputs[f"{case['id']}_{system}"] = out
             r = row(case, system, out)
             rows.append(r)
-            print(f"{case['id']} {system:9s} pass={r['case_pass']!s:5s} refused={out.get('refused')} "
+            print(f"{case['id']} {system:12s} pass={r['case_pass']!s:5s} refused={out.get('refused')} "
                   f"status={out.get('error', 'ok')}")
 
     exp = ROOT / "experiments"
@@ -108,16 +126,19 @@ def main():
             w.writeheader()
         w.writerows(rows)
 
-    for system in ("baseline", "candidate"):
+    for system, _ in SYSTEMS:
         rs = [r for r in rows if r["system"] == system]
         passed = sum(1 for r in rs if r["case_pass"] is True)
         failed = sum(1 for r in rs if r["case_pass"] is False)
         na = len(rs) - passed - failed
         ok = sum(1 for r in rs if r["refusal_correct"] is True)
-        scores = [r["kpi_score"] for r in rs if isinstance(r["kpi_score"], (int, float))]
-        avg = sum(scores) / len(scores) if scores else float("nan")
+        chosen = [kpi_score(r) for r in rs if r["kpi_score"] != ""]
+        drafts = [r["kpi_mean_all"] for r in rs if r["kpi_mean_all"] != ""]
+        avg = sum(chosen) / len(chosen) if chosen else float("nan")
+        avg_all = sum(drafts) / len(drafts) if drafts else float("nan")
         print(f"[{system}] cases passed: {passed}/{len(rs)} (failed {failed}, n/a {na}) | "
-              f"correct refusal decisions: {ok}/{len(rs)} | mean KPI score: {avg:.2f}")
+              f"correct refusals: {ok}/{len(rs)} | KPI score, chosen: {avg:.2f}, all drafts: {avg_all:.2f}")
+    print("Fair comparison: candidate vs baseline_bon (same number of drafts, same selection, same KPIs).")
     cand = [r for r in rows if r["system"] == "candidate" and r["persona_calls"] != ""]
     used = sum(r["persona_calls"] for r in cand)
     full = sum(r["persona_calls_exhaustive"] for r in cand)

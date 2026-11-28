@@ -36,10 +36,25 @@ pip install -r requirements.txt
 cp .env.example .env          # puis renseigner les clés API (ne jamais commiter .env)
 
 MOCK=1 python src/run_eval.py # test de plomberie hors ligne : résultats NON valides
-python src/run_eval.py        # vraie exécution baseline vs candidat sur tests/cases.json
+python src/run_eval.py        # vraie exécution : candidat, baseline simple et baseline best-of-N sur tests/cases.json
 
 python src/diffusion_experiment.py --model stabilityai/sdxl-turbo   # GPU recommandé (Colab T4)
 ```
+
+## Comparaison équitable : baseline best-of-N
+
+Le candidat produit 3 scénarios et garde le meilleur. Face à un LLM unique qui ne produit qu'un brouillon, un meilleur
+score pourrait venir de ce choix et non de l'approche multi-LLM. `run_eval.py` compare donc trois systèmes :
+
+| Système | Brouillons | Sélection |
+|---|---|---|
+| `baseline` | 1 (un modèle, un prompt) | aucune |
+| `baseline_bon` | 3 (même modèle et prompt, température 0,7, seeds 42 à 44) | **la même que le candidat** (audit, puis bandit sur les clients simulés) |
+| `candidate` | 3 (3 fournisseurs, 3 styles, KPI de l'orchestrateur) | audit, puis bandit |
+
+Tous les audits reçoivent les KPI de l'orchestrateur (même étalon). **La comparaison qui compte est `candidate` vs
+`baseline_bon`** ; la colonne `kpi_mean_all` (score moyen de tous les brouillons, avant sélection) donne la même
+comparaison sans aucun choix. Réglages : `BON_N`, `BON_TEMPERATURE` dans `.env`.
 
 ## Bandit : tester moins de clients, trouver le même gagnant
 

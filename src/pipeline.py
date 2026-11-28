@@ -1,6 +1,14 @@
-"""Minimal multi-LLM consulting chain.
+"""Minimal multi-LLM consulting chain, and the two baselines it is compared with.
 
-objective -> orchestrator -> N generators -> auditor -> personas (bandit) -> best scenario
+candidate:     objective -> orchestrator -> N generators (providers x styles) -> select -> best scenario
+baseline:      one model, one prompt, one draft (no selection)
+baseline_bon:  one model, one prompt, N drafts (sampled) -> select -> best scenario   (best-of-N control)
+
+select = auditor on every draft, then personas on the compliant ones, then pick. It is the same function
+for the candidate and baseline_bon, and every audit gets the same KPIs (the orchestrator's), so the
+candidate's edge over baseline_bon can only come from how the drafts are generated, not from choosing the
+best of N drafts or from a different yardstick.
+
 The auditor runs first, so non-compliant scenarios never use the persona budget.
 PERSONA_MODE=bandit (default): top-two Thompson sampling (src/bandit.py) stops once the winner is
 BANDIT_CONFIDENCE likely (default 95%) or after PERSONA_BUDGET persona calls per case.
@@ -30,9 +38,13 @@ PERSONA_MODE = os.getenv("PERSONA_MODE", "bandit")
 PERSONA_BUDGET = int(os.getenv("PERSONA_BUDGET", "30"))
 BANDIT_MIN_PULLS = int(os.getenv("BANDIT_MIN_PULLS", "3"))
 BANDIT_CONFIDENCE = float(os.getenv("BANDIT_CONFIDENCE", "0.95"))
+# Best-of-N baseline: as many drafts as the candidate has generators, sampled with a higher temperature
+# (at 0.2 the drafts would be near-duplicates and best-of-N would be a strawman) and seeds SEED..SEED+N-1.
+BON_N = int(os.getenv("BON_N", str(len(GENERATOR_MODELS))))
+BON_TEMPERATURE = float(os.getenv("BON_TEMPERATURE", "0.7"))
 
-if AUDITOR_MODEL in GENERATOR_MODELS:  # no model grades its own work
-    raise SystemExit(f"AUDITOR_MODEL ({AUDITOR_MODEL}) must differ from every GENERATOR_MODELS entry.")
+if AUDITOR_MODEL in GENERATOR_MODELS + [BASELINE_MODEL]:  # no model grades its own work
+    raise SystemExit(f"AUDITOR_MODEL ({AUDITOR_MODEL}) must differ from every generator and from BASELINE_MODEL.")
 if PERSONA_MODE not in ("bandit", "exhaustive"):
     raise SystemExit(f"PERSONA_MODE must be 'bandit' or 'exhaustive', not {PERSONA_MODE!r}.")
 
@@ -46,7 +58,8 @@ def persona_order() -> list[int]:
     return order
 
 
-def _kpi_score(audit: dict) -> float:
+def kpi_score(audit: dict) -> float:
+    """Auditor KPI score as a number in [0, 10]; missing or malformed counts as 0."""
     try:
         return min(max(float(audit.get("kpi_score", 0)), 0.0), 10.0)
     except (TypeError, ValueError):
@@ -63,50 +76,42 @@ def _intent(answer) -> float | None:
         return None
 
 
-def _audit(objective: str, kpis: list, scenario: dict) -> tuple[dict, float, float]:
+def _new_spent() -> dict:
+    return {"latency_s": 0.0, "cost_usd": 0.0}
+
+
+def _track(spent: dict, r: dict) -> dict:
+    spent["latency_s"] += r["latency_s"]
+    spent["cost_usd"] += r["cost_usd"]
+    return r
+
+
+def _audit(objective: str, kpis: list, scenario: dict, spent: dict) -> dict:
     user = json.dumps({"objective": objective, "kpis": kpis, "scenario": scenario}, ensure_ascii=False)
-    r = call("auditor", AUDITOR_MODEL, P.AUDITOR, user, P.PROMPT_VERSION)
-    audit = r["json"] if isinstance(r["json"], dict) else {}
-    return audit, r["latency_s"], r["cost_usd"]
+    r = _track(spent, call("auditor", AUDITOR_MODEL, P.AUDITOR, user, P.PROMPT_VERSION))
+    return r["json"] if isinstance(r["json"], dict) else {}
 
 
-def run_candidate(objective: str) -> dict:
-    spent = {"latency_s": 0.0, "cost_usd": 0.0}
+def select(objective: str, kpis: list, drafts: list[dict], spent: dict) -> dict:
+    """Audit every draft, test the compliant ones on personas (bandit or exhaustive), pick the best.
 
-    def track(r: dict) -> dict:
-        spent["latency_s"] += r["latency_s"]
-        spent["cost_usd"] += r["cost_usd"]
-        return r
-
-    o = track(call("orchestrator", ORCHESTRATOR_MODEL, P.ORCHESTRATOR, objective, P.PROMPT_VERSION))
-    plan = o["json"] if isinstance(o["json"], dict) else {}
-    if plan.get("refuse"):
-        return {"refused": True, "refusal_reason": plan.get("refusal_reason", ""), **spent}
-
-    kpis = plan.get("kpis", [])
+    drafts: [{"generator", "style", "scenario"}]. Shared by the candidate and the best-of-N baseline so
+    both choose their recommendation the same way.
+    """
     scenarios = []
-    for i, model in enumerate(GENERATOR_MODELS):
-        style = P.GENERATOR_STYLES[i % len(P.GENERATOR_STYLES)]
-        user = json.dumps({"objective": objective, "kpis": kpis, "conflicts": plan.get("conflicts", [])},
-                          ensure_ascii=False)
-        g = track(call(f"generator_{i}", model, P.GENERATOR.replace("{style}", style), user, P.PROMPT_VERSION))
-        if not isinstance(g["json"], dict):
-            continue
-        audit, a_lat, a_cost = _audit(objective, kpis, g["json"])
-        spent["latency_s"] += a_lat
-        spent["cost_usd"] += a_cost
-        scenarios.append({"generator": model, "style": style, "scenario": g["json"], "audit": audit,
-                          "compliant": audit.get("compliance") == "pass", "kpi": _kpi_score(audit),
-                          "intents": {}})
+    for d in drafts:
+        audit = _audit(objective, kpis, d["scenario"], spent)
+        scenarios.append({**d, "audit": audit, "compliant": audit.get("compliance") == "pass",
+                          "kpi": kpi_score(audit), "intents": {}})
 
     arms = [s for s in scenarios if s["compliant"]]
     order = persona_order()
 
     def pull(arm: int, k: int) -> float | None:
         s, persona = arms[arm], PERSONAS[order[k]]
-        r = track(call(f"persona_{persona['id']}", PERSONA_MODEL,
-                       P.PERSONA.format(persona=json.dumps(persona, ensure_ascii=False)),
-                       json.dumps(s["scenario"], ensure_ascii=False), P.PROMPT_VERSION))
+        r = _track(spent, call(f"persona_{persona['id']}", PERSONA_MODEL,
+                               P.PERSONA.format(persona=json.dumps(persona, ensure_ascii=False)),
+                               json.dumps(s["scenario"], ensure_ascii=False), P.PROMPT_VERSION))
         intent = _intent(r["json"])
         s["intents"][persona["id"]] = intent
         return None if intent is None else reward(s["kpi"], intent)
@@ -134,22 +139,66 @@ def run_candidate(objective: str) -> dict:
         best = arms[bandit["choice"]]
     else:
         best = max(scenarios, key=lambda s: s["combined"]) if scenarios else None
+    return {"scenarios": scenarios, "best": best, "persona_mode": PERSONA_MODE, "persona_calls": calls,
+            "persona_calls_exhaustive": exhaustive_calls, "persona_order": [PERSONAS[i]["id"] for i in order],
+            "bandit": bandit}
 
+
+def run_candidate(objective: str) -> dict:
+    spent = _new_spent()
+    o = _track(spent, call("orchestrator", ORCHESTRATOR_MODEL, P.ORCHESTRATOR, objective, P.PROMPT_VERSION))
+    plan = o["json"] if isinstance(o["json"], dict) else {}
+    if plan.get("refuse"):
+        return {"refused": True, "refusal_reason": plan.get("refusal_reason", ""), **spent}
+
+    kpis = plan.get("kpis") if isinstance(plan.get("kpis"), list) else []
+    drafts = []
+    for i, model in enumerate(GENERATOR_MODELS):
+        style = P.GENERATOR_STYLES[i % len(P.GENERATOR_STYLES)]
+        user = json.dumps({"objective": objective, "kpis": kpis, "conflicts": plan.get("conflicts", [])},
+                          ensure_ascii=False)
+        g = _track(spent, call(f"generator_{i}", model, P.GENERATOR.replace("{style}", style), user,
+                               P.PROMPT_VERSION))
+        if isinstance(g["json"], dict):
+            drafts.append({"generator": model, "style": style, "scenario": g["json"]})
+
+    chosen = select(objective, kpis, drafts, spent)
     tool_results = [request_tool(a) for a in plan.get("requested_actions", [])]
-    return {"refused": False, "plan": plan, "scenarios": scenarios, "best": best,
-            "persona_mode": PERSONA_MODE, "persona_calls": calls, "persona_calls_exhaustive": exhaustive_calls,
-            "persona_order": [PERSONAS[i]["id"] for i in order], "bandit": bandit,
-            "tool_results": tool_results, **spent}
+    return {"refused": False, "plan": plan, **chosen, "tool_results": tool_results, **spent}
 
 
-def run_baseline(objective: str) -> dict:
-    """Single LLM, single prompt. Scored by the same auditor so the metric is comparable."""
-    b = call("baseline", BASELINE_MODEL, P.BASELINE, objective, P.PROMPT_VERSION)
-    latency, cost = b["latency_s"], b["cost_usd"]
+def run_baseline(objective: str, kpis: list | None = None) -> dict:
+    """Single LLM, single prompt, single draft. Audited with the same KPIs as the candidate."""
+    spent = _new_spent()
+    b = _track(spent, call("baseline", BASELINE_MODEL, P.BASELINE, objective, P.PROMPT_VERSION))
     out = b["json"] if isinstance(b["json"], dict) else {}
     if out.get("refuse"):
-        return {"refused": True, "refusal_reason": out.get("refusal_reason", ""),
-                "latency_s": latency, "cost_usd": cost}
-    audit, a_lat, a_cost = _audit(objective, [], out)
-    return {"refused": False, "best": {"scenario": out, "audit": audit, "persona_avg": None},
-            "tool_results": [], "latency_s": latency + a_lat, "cost_usd": cost + a_cost}
+        return {"refused": True, "refusal_reason": out.get("refusal_reason", ""), **spent}
+    audit = _audit(objective, kpis or [], out, spent)
+    best = {"generator": BASELINE_MODEL, "style": "unique", "scenario": out, "audit": audit,
+            "kpi": kpi_score(audit), "persona_avg": None}
+    return {"refused": False, "scenarios": [best], "best": best, "tool_results": [], **spent}
+
+
+def run_baseline_bon(objective: str, kpis: list | None = None) -> dict:
+    """Best-of-N control: the baseline model and prompt sampled BON_N times, then the candidate's selection.
+
+    The system refuses when most drafts refuse (majority vote); otherwise it selects among the drafts that
+    did not refuse. A draft without valid JSON counts towards N but is neither a refusal nor a candidate.
+    """
+    spent = _new_spent()
+    drafts, refusals = [], []
+    for i in range(BON_N):
+        b = _track(spent, call(f"baseline_bon_{i}", BASELINE_MODEL, P.BASELINE, objective, P.PROMPT_VERSION,
+                               temperature=BON_TEMPERATURE, seed=SEED + i))
+        out = b["json"] if isinstance(b["json"], dict) else None
+        if out is None:
+            continue
+        if out.get("refuse"):
+            refusals.append(out.get("refusal_reason", ""))
+        else:
+            drafts.append({"generator": BASELINE_MODEL, "style": f"échantillon {i + 1}", "scenario": out})
+    if 2 * len(refusals) > BON_N:
+        return {"refused": True, "refusal_reason": refusals[0], "drafts_refused": len(refusals), **spent}
+    chosen = select(objective, kpis or [], drafts, spent)
+    return {"refused": False, **chosen, "drafts_refused": len(refusals), "tool_results": [], **spent}

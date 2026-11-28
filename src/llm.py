@@ -71,8 +71,15 @@ def temperature_supported(model: str) -> bool:
     return entry.get("supports_sampling_params") is not False
 
 
-def call(role: str, model: str, system: str, user: str, prompt_version: str) -> dict:
-    """Call a model, return {"text", "json", "latency_s", "cost_usd"} and log a trace."""
+def call(role: str, model: str, system: str, user: str, prompt_version: str,
+         temperature: float | None = None, seed: int | None = None) -> dict:
+    """Call a model, return {"text", "json", "latency_s", "cost_usd"} and log a trace.
+
+    temperature / seed override TEMPERATURE / SEED for this call (best-of-N sampling); the trace logs
+    the values actually sent.
+    """
+    temperature = TEMPERATURE if temperature is None else temperature
+    seed = SEED if seed is None else seed
     start = time.perf_counter()
     cost = 0.0
     seed_applied = False
@@ -87,9 +94,9 @@ def call(role: str, model: str, system: str, user: str, prompt_version: str) -> 
         temperature_applied = temperature_supported(model)
         extra = {}
         if temperature_applied:
-            extra["temperature"] = TEMPERATURE
+            extra["temperature"] = temperature
         if seed_applied:
-            extra["seed"] = SEED
+            extra["seed"] = seed
         resp = litellm.completion(
             model=model,
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
@@ -106,8 +113,8 @@ def call(role: str, model: str, system: str, user: str, prompt_version: str) -> 
     trace({
         "type": "llm_call", "role": role, "model": "mock" if MOCK else model, "model_served": served,
         "prompt_version": prompt_version,
-        "temperature": TEMPERATURE if temperature_applied else None, "temperature_applied": temperature_applied,
-        "seed": SEED if seed_applied else None, "seed_applied": seed_applied,
+        "temperature": temperature if temperature_applied else None, "temperature_applied": temperature_applied,
+        "seed": seed if seed_applied else None, "seed_applied": seed_applied,
         "latency_s": round(latency, 3), "cost_usd": cost, "json_ok": parsed is not None,
         "input": user[:2000], "output": (text or "")[:4000],
     })

@@ -38,7 +38,9 @@ Architecture diagram (Whiteboard): https://claude.ai/artifact/VgJqsrKfx9WbgWsxbm
 
 ## Repo layout
 
-- `src/pipeline.py` — candidate chain (orchestrator → generators → auditor → personas via bandit → best) and single-LLM baseline.
+- `src/pipeline.py` — candidate chain (orchestrator → generators → auditor → personas via bandit → best) and two baselines:
+  `baseline` (one draft) and `baseline_bon` (best-of-N: same model, N drafts at `BON_TEMPERATURE`, **same `select()`**
+  as the candidate). Every audit gets the candidate orchestrator's KPIs. Compare candidate vs `baseline_bon`, not only vs `baseline`.
   `PERSONA_MODE=bandit` (default) or `exhaustive` (every compliant scenario × every persona)
 - `src/bandit.py` — top-two Thompson sampling + early stopping, and the uniform control; no LLM
 - `src/bandit_eval.py` — offline replay on an exhaustive run: bandit vs uniform, winner found and calls saved
@@ -74,6 +76,7 @@ python src/diffusion_experiment.py --model stabilityai/sdxl-turbo   # needs a GP
 - The LLM auditor is a biased judge: keep a human check on a few outputs and report the agreement.
 - Every experiment must be reproducible: log model, prompt version, temperature, seed (traces already do this).
 - Decisions in the docs must follow from results, not impressions.
+- A claimed candidate win needs the best-of-N baseline (`baseline_bon`): beating a single draft can come from selection alone.
 - Skincare compliance: no therapeutic claims ("cures", "treats" a disease), no fake reviews, no fake before/after images
   (EU Regulation 1223/2009, claims criteria 655/2013).
 - Diffusion bias: test generations across Fitzpatrick skin types and document the outcome.

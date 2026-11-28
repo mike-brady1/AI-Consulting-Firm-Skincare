@@ -18,8 +18,8 @@ def mock_answer(role: str, user: str) -> str:
                            "needs_clarification": "faire mieux" in text, "conflicts": [],
                            "kpis": [{"name": "ventes", "target": "+15%", "hypothese": False}],
                            "requested_actions": actions})
-    if role.startswith("generator") or role == "baseline":
-        if role == "baseline" and any(w in text for w in FORBIDDEN):
+    if role.startswith("generator") or role.startswith("baseline"):
+        if role.startswith("baseline") and any(w in text for w in FORBIDDEN):
             return json.dumps({"refuse": True, "refusal_reason": "mock"})
         return json.dumps({"title": f"Mock scenario ({role})", "how": ["a"], "who": ["b"],
                            "figures": [{"kpi": "ventes", "estimate": "+12%", "hypothese": True}],
